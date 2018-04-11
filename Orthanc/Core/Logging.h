@@ -59,6 +59,8 @@
 #  include <orthanc/OrthancCPlugin.h>
 #endif
 
+#include <boost/lexical_cast.hpp>
+
 namespace Orthanc
 {
   namespace Logging
@@ -91,13 +93,8 @@ namespace Orthanc
       {
       }
       
-      std::ostream& operator<< (const std::string& message)
-      {
-        return *this;
-      }
-
-      // This overload fixes build problems with Visual Studio 2015
-      std::ostream& operator<< (const char* message)
+      template <typename T>
+      std::ostream& operator<< (const T& message)
       {
         return *this;
       }
@@ -116,39 +113,38 @@ namespace Orthanc
        ORTHANC_ENABLE_LOGGING_STDIO == 1)
 
 #  include <boost/noncopyable.hpp>
-#  include <boost/lexical_cast.hpp>
 #  define LOG(level)  ::Orthanc::Logging::InternalLogger \
-  (::Orthanc::Logging::level, __FILE__, __LINE__)
+  (::Orthanc::Logging::InternalLevel_ ## level, __FILE__, __LINE__)
 #  define VLOG(level) ::Orthanc::Logging::InternalLogger \
-  (::Orthanc::Logging::TRACE, __FILE__, __LINE__)
+  (::Orthanc::Logging::InternalLevel_TRACE, __FILE__, __LINE__)
 
 namespace Orthanc
 {
   namespace Logging
   {
-    enum Level
+    enum InternalLevel
     {
-      ERROR,
-      WARNING,
-      INFO,
-      TRACE
+      InternalLevel_ERROR,
+      InternalLevel_WARNING,
+      InternalLevel_INFO,
+      InternalLevel_TRACE
     };
     
     class InternalLogger : public boost::noncopyable
     {
     private:
-      Level       level_;
-      std::string message_;
+      InternalLevel  level_;
+      std::string    message_;
 
     public:
-      InternalLogger(Level level,
+      InternalLogger(InternalLevel level,
                      const char* file,
                      int line);
 
       ~InternalLogger();
       
       template <typename T>
-      InternalLogger& operator<< (T message)
+      InternalLogger& operator<< (const T& message)
       {
         message_ += boost::lexical_cast<std::string>(message);
         return *this;
@@ -186,15 +182,10 @@ namespace Orthanc
 
       ~InternalLogger();
       
-      std::ostream& operator<< (const std::string& message)
+      template <typename T>
+      std::ostream& operator<< (const T& message)
       {
-        return (*stream_) << message;
-      }
-
-      // This overload fixes build problems with Visual Studio 2015
-      std::ostream& operator<< (const char* message)
-      {
-        return (*stream_) << message;
+        return (*stream_) << boost::lexical_cast<std::string>(message);
       }
     };
   }
